@@ -162,6 +162,7 @@ export function EventView({ initial }: { initial: Initial }) {
   );
 
   const nameOf = useMemo(() => new Map(responses.map((r) => [r.id, r.name])), [responses]);
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/e/${id}` : `/e/${id}`;
 
   const rangeParts = (start: number, len: number) =>
     formatRangeParts(instants[start], instants[start] + len * event.slot_min * 60_000, shownTz, event.kind);
@@ -169,6 +170,84 @@ export function EventView({ initial }: { initial: Initial }) {
     const p = rangeParts(start, len);
     return `${p.day} · ${p.time}`;
   };
+
+  const whenLabel = (start: number, len: number) => {
+    const p = rangeParts(start, len);
+    return `${p.day}, ${p.time}`;
+  };
+
+  const windowAttendance = (w: Window) => {
+    const total = responses.length;
+    const avail = w.yes.length + w.maybe.length;
+    if (w.missing.length === 0 && w.maybe.length === 0) return `everyone (${total}/${total})`;
+    let s = `${avail}/${total}`;
+    if (w.missing.length > 0) s += `, missing ${w.missing.map((id) => nameOf.get(id)).join(", ")}`;
+    return s;
+  };
+
+  const windowAt = (start: number, len: number): Window => {
+    const found = windows.find((w) => w.start === start && w.len === len);
+    if (found) return found;
+    const yes: string[] = [];
+    const maybe: string[] = [];
+    const missing: string[] = [];
+    for (const r of responses) {
+      let hasMaybe = false;
+      let ok = true;
+      for (let i = 0; i < len; i++) {
+        const c = r.slots[start + i] ?? "0";
+        if (c === "0") {
+          ok = false;
+          break;
+        }
+        if (c === "2") hasMaybe = true;
+      }
+      if (!ok) missing.push(r.id);
+      else if (hasMaybe) maybe.push(r.id);
+      else yes.push(r.id);
+    }
+    return { start, len, yes, maybe, missing };
+  };
+
+  const resultsText = useMemo(() => {
+    if (responses.length === 0) return "";
+    const lines: string[] = [
+      `${event.title} — best times (${shortZone(shownTz, instants[0] ?? Date.now())})`,
+    ];
+    const locked =
+      event.final_start != null && event.final_len != null
+        ? { start: event.final_start, len: event.final_len }
+        : null;
+    if (locked) {
+      const w = windowAt(locked.start, locked.len);
+      lines.push(`Locked in: ${whenLabel(locked.start, locked.len)} — ${windowAttendance(w)}`);
+    } else if (windows.length === 0) {
+      lines.push(required.size ? "No time works for everyone marked must attend." : "Nobody has marked any times yet.");
+    } else {
+      for (const w of windows) {
+        lines.push(`• ${whenLabel(w.start, w.len)} — ${windowAttendance(w)}`);
+      }
+    }
+    lines.push(shareUrl);
+    return lines.join("\n");
+  }, [
+    event.title,
+    event.final_start,
+    event.final_len,
+    responses,
+    windows,
+    shownTz,
+    instants,
+    shareUrl,
+    nameOf,
+    required,
+  ]);
+
+  async function copyResultsText() {
+    if (!resultsText) return;
+    await copy(resultsText, "Results");
+    track("Results Copied");
+  }
 
   // ---- actions ----------------------------------------------------------
   function flash(msg: string) {
@@ -273,7 +352,6 @@ export function EventView({ initial }: { initial: Initial }) {
     }
   }
 
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/e/${id}` : `/e/${id}`;
   const timeRange = `${formatMinute(event.start_min)} – ${formatMinute(event.end_min % 1440 === 0 && event.end_min ? 0 : event.end_min)}`;
 
   // ---- render -----------------------------------------------------------
@@ -376,7 +454,20 @@ export function EventView({ initial }: { initial: Initial }) {
   );
 
   const bestPane = (
-    <Card title="Best times">
+    <Card
+      title="Best times"
+      aside={
+        responses.length > 0 ? (
+          <button
+            type="button"
+            onClick={copyResultsText}
+            className="shrink-0 rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-2 hover:bg-ink hover:text-paper hover:border-ink transition"
+          >
+            Copy as text
+          </button>
+        ) : null
+      }
+    >
       {responses.length === 0 ? (
         <p className="text-[15px] text-muted">No responses yet. Share the link and results show up here as people respond.</p>
       ) : (
