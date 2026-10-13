@@ -16,6 +16,7 @@ import {
 import type { PublicEvent, PublicResponse } from "@/lib/server";
 import { Grid, type Brush } from "./Grid";
 import { Segmented } from "./ui";
+import { track } from "./Analytics";
 
 interface Initial {
   event: PublicEvent;
@@ -191,6 +192,7 @@ export function EventView({ initial }: { initial: Initial }) {
 
   async function join(name: string) {
     const data = await api(`/api/events/${id}/responses`, { method: "POST", body: JSON.stringify({ name }) });
+    track("Poll Joined");
     const next = { ...stored, rid: String(data.id), token: String(data.token) };
     writeStored(id, next);
     setStored(next);
@@ -250,6 +252,7 @@ export function EventView({ initial }: { initial: Initial }) {
       body: JSON.stringify(w ? { final_start: w.start, final_len: w.len } : { final_start: null }),
     });
     setEvent((e) => ({ ...e, final_start: w?.start ?? null, final_len: w?.len ?? null }));
+    if (w) track("Time Locked In", { responses: responses.length });
     flash(w ? "Time locked in." : "Cleared.");
   }
 
@@ -564,6 +567,7 @@ export function EventView({ initial }: { initial: Initial }) {
           <div className="flex flex-wrap gap-2">
             <a
               href={`/api/events/${id}/ics`}
+              onClick={() => track("Calendar Export", { target: "ics" })}
               className="rounded-full bg-ink text-paper px-4 py-2 text-sm font-semibold hover:bg-ink-2"
             >
               Add to calendar
@@ -572,6 +576,7 @@ export function EventView({ initial }: { initial: Initial }) {
               href={googleLink(event.title, event.note, shareUrl, final.start, final.end, event.kind === "weekdays")}
               target="_blank"
               rel="noreferrer"
+              onClick={() => track("Calendar Export", { target: "google" })}
               className="rounded-full border border-line bg-card px-4 py-2 text-sm font-semibold hover:border-ink/30"
             >
               Google Calendar

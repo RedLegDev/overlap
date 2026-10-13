@@ -16,7 +16,7 @@ Hosted free at Red Leg Dev's expense. That only works if one poll costs close to
 | Only yes/no | Yes and **If needed**, painted with separate brushes |
 | "Password" to edit your own row, which nobody remembers | Device remembers you; a personal edit link moves you to another device |
 | Organizer can't close the loop | Organizer locks in a time; everyone gets an Add to calendar (.ics / Google) button |
-| Banner ads, 2009 visual design | No ads, no tracking, Red Leg Dev branding, light and dark themes |
+| Banner ads, 2009 visual design | No ads, no cookies, Red Leg Dev branding, light and dark themes |
 
 ## Product scope
 
@@ -79,4 +79,4 @@ MIT. Public repo under `RedLegDev/overlap`. Branding (name, Red Leg Dev mark) is
 ## Open decisions for Matt
 1. **Name.** "Overlap" is a working name. Swap is a find-replace plus the Worker name.
 2. **Domain.** `overlap.redleg.dev`, a standalone domain, or both.
-3. **Analytics.** Cloudflare Web Analytics (cookie-free) is the only thing that fits "no tracking"; leave it off until there's a reason.
+3. **Analytics.** Decided 2026-10-13: self-hosted Plausible (analytics.redleg.dev), cookie-free, manual mode with poll ids and hash tokens redacted. Custom events: Poll Created, Poll Joined, Time Locked In, Calendar Export.

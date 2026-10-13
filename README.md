@@ -2,7 +2,7 @@
 
 Free, open-source group scheduling. Pick some days, share one link, everyone paints when they're free. Overlap ranks the best times and shows who's missing from each.
 
-No accounts, no ads, no tracking. Built by [Red Leg Dev](https://redleg.dev).
+No accounts, no ads, no cookies. Built by [Red Leg Dev](https://redleg.dev).
 
 - Drag-to-paint that works on phones
 - Available and If needed brushes

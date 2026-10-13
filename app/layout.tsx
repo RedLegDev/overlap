@@ -5,6 +5,7 @@ import "@fontsource/instrument-serif/latin-400-italic.css";
 import "./globals.css";
 import { Wordmark } from "@/components/Logo";
 import { SITE } from "@/lib/site";
+import { Analytics } from "@/components/Analytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -36,7 +37,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Self-hosted, cookie-free Plausible. Manual mode so poll ids and hash tokens are redacted. */}
+        <script
+          defer
+          data-domain="overlap.redleg.dev"
+          src="https://analytics.redleg.dev/js/script.manual.file-downloads.outbound-links.pageview-props.tagged-events.js"
+        />
+      </head>
       <body className="min-h-dvh flex flex-col">
+        <Analytics />
         <header className="mx-auto w-full max-w-7xl px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between">
           <a href="/" className="rounded-md" aria-label="Overlap home">
             <Wordmark />

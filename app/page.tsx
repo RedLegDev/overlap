@@ -20,7 +20,7 @@ export default function Home() {
               ["No accounts", "for you or anyone you invite."],
               ["Drag to paint", "on a phone or a laptop. Mark maybes separately."],
               ["Best times, ranked", "with who's missing from each."],
-              ["Free and open source.", "No ads, no tracking."],
+              ["Free and open source.", "No ads, no cookies."],
             ].map(([a, b]) => (
               <li key={a} className="flex gap-3">
                 <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-redleg" />

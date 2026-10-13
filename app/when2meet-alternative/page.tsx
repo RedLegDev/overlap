@@ -4,7 +4,7 @@ import { SITE } from "@/lib/site";
 
 const TITLE = "Overlap vs. when2meet: a free when2meet alternative";
 const DESCRIPTION =
-  "Overlap is a free, open-source alternative to when2meet with no ads or tracking, an If needed option, ranked best times, and calendar export once a time is locked in.";
+  "Overlap is a free, open-source alternative to when2meet with no ads or cookies, an If needed option, ranked best times, and calendar export once a time is locked in.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const ROWS: [string, string, string][] = [
   ["Price", "Free", "Free"],
   ["Ads", "Google AdSense ads", "None"],
-  ["Analytics and ad tracking", "Google Analytics and Google Ads tags", "None"],
+  ["Analytics and ad tracking", "Google Analytics and Google Ads tags", "Self-hosted, cookie-free Plausible page counts; no ad tracking"],
   ["Account required", "No. Name, with an optional password", "No. The device remembers you; a personal link moves you to another one"],
   ["Marking availability", "Drag across a grid", "Drag across a grid, with Available and If needed brushes"],
   ["Time zones", "Detected from the browser, changeable", "Detected from the browser, changeable; the grid is re-laid out for each viewer"],
@@ -34,7 +34,7 @@ export default function Page() {
       </h1>
       <p className="mt-6 text-lg text-ink-2 text-pretty">
         Overlap does the same job as when2meet: one person proposes some days and hours, everyone marks when they&rsquo;re
-        free, and the group sees where it overlaps. It&rsquo;s free, has no ads or tracking, and adds the parts when2meet
+        free, and the group sees where it overlaps. It&rsquo;s free, has no ads or ad tracking, and adds the parts when2meet
         leaves to you: an If needed option, a ranked list of the best times, and a way to lock in the final time and put
         it on everyone&rsquo;s calendar.
       </p>

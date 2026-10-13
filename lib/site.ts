@@ -14,7 +14,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is Overlap free?",
-    a: "Yes. Overlap is free to use with no plan tiers, no ads, and no tracking. Red Leg Dev hosts it on Cloudflare Workers, where a poll costs a fraction of a cent to serve. The source code is MIT-licensed on GitHub, so anyone can run their own copy.",
+    a: "Yes. Overlap is free to use with no plan tiers, no ads, and no cookies. Usage is counted with self-hosted, cookie-free Plausible analytics that never sees poll links. Red Leg Dev hosts it on Cloudflare Workers, where a poll costs a fraction of a cent to serve. The source code is MIT-licensed on GitHub, so anyone can run their own copy.",
   },
   {
     q: "Do people need an account to respond?",

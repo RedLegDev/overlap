@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatMinute, shortZone, WEEKDAY_SHORT } from "@/lib/time";
 import { Segmented } from "./ui";
 import { useTurnstile } from "./useTurnstile";
+import { track } from "./Analytics";
 
 type Kind = "dates" | "weekdays";
 
@@ -129,6 +130,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
         if (email.trim()) localStorage.setItem("overlap:email", email.trim());
         else localStorage.removeItem("overlap:email");
       } catch {}
+      track("Poll Created", { kind, days: dayCount, slot, emailed: !!data.emailed });
       const sent = email.trim() ? (data.emailed ? "&emailed=1" : "&emailed=0") : "";
       window.location.href = `/e/${data.id}#admin=${data.adminToken}&new=1${sent}`;
     } catch (err) {

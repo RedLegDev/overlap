@@ -1,6 +1,6 @@
 # Overlap
 
-> Overlap is a free, open-source group scheduling poll at https://overlap.redleg.dev. An organizer picks dates (or days of the week) and a range of hours, shares one link, and each person drags across a grid to mark when they're free. Overlap shows a group heatmap and ranks the time windows the most people can make. No accounts, no ads, no tracking. Built and hosted by Red Leg Dev (https://redleg.dev).
+> Overlap is a free, open-source group scheduling poll at https://overlap.redleg.dev. An organizer picks dates (or days of the week) and a range of hours, shares one link, and each person drags across a grid to mark when they're free. Overlap shows a group heatmap and ranks the time windows the most people can make. No accounts, no ads, no cookies. Built and hosted by Red Leg Dev (https://redleg.dev).
 
 ## Key facts
 
@@ -11,6 +11,7 @@
 - Results: ranked "Best times" windows with counts and the names of who's missing, plus a "Must attend" filter.
 - Finalizing: the organizer locks in a time; everyone gets an .ics file or a Google Calendar link.
 - Organizer email: optional at creation; Overlap sends the poll and organizer links once and does not store the address.
+- Analytics: cookie-free, self-hosted Plausible page counts with poll ids and links redacted. No ad tracking.
 - Privacy: polls are reachable only by link and excluded from search engines. Date polls are deleted 60 days after their last date.
 - Source: MIT license, https://github.com/RedLegDev/overlap. Runs on Cloudflare Workers with a D1 database.
 
