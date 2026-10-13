@@ -1,4 +1,5 @@
 import {
+  limited,
   bearer,
   cleanName,
   cleanSlots,
@@ -25,6 +26,8 @@ async function load(id: string, rid: string) {
 
 /** Save availability (and optionally rename). Participant token only. */
 export async function PUT(req: Request, { params }: Ctx) {
+  const blocked = await limited(req, "write");
+  if (blocked) return blocked;
   const { id, rid } = await params;
   const found = await load(id, rid);
   if (!found) return fail(404, "Response not found.");
@@ -53,6 +56,8 @@ export async function PUT(req: Request, { params }: Ctx) {
 
 /** Remove a response. The participant or the organizer can do this. */
 export async function DELETE(req: Request, { params }: Ctx) {
+  const blocked = await limited(req, "write");
+  if (blocked) return blocked;
   const { id, rid } = await params;
   const found = await load(id, rid);
   if (!found) return fail(404, "Response not found.");

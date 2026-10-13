@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { CreateForm } from "@/components/CreateForm";
 
 export default function Home() {
@@ -30,7 +31,7 @@ export default function Home() {
           <HeroPreview />
         </section>
         <section className="rise" style={{ animationDelay: "80ms" }}>
-          <CreateForm />
+          <CreateForm siteKey={env.TURNSTILE_SITE_KEY} />
         </section>
       </div>
     </div>

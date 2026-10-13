@@ -3,15 +3,22 @@ import {
   expiryFor,
   fail,
   hashToken,
+  humanCheck,
   json,
+  limited,
   randomId,
   randomToken,
   validateNewEvent,
 } from "@/lib/server";
 
 export async function POST(req: Request) {
-  const input = validateNewEvent(await req.json().catch(() => null));
+  const blocked = await limited(req, "create");
+  if (blocked) return blocked;
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const input = validateNewEvent(body);
   if (typeof input === "string") return fail(400, input);
+  const notHuman = await humanCheck(req, body?.turnstile);
+  if (notHuman) return notHuman;
 
   const now = Date.now();
   const id = randomId();

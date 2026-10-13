@@ -1,4 +1,5 @@
 import {
+  limited,
   cleanName,
   db,
   fail,
@@ -15,6 +16,8 @@ type Ctx = { params: Promise<{ id: string }> };
 
 /** Join a poll by name. Returns the token that authorizes edits to this response. */
 export async function POST(req: Request, { params }: Ctx) {
+  const blocked = await limited(req, "write");
+  if (blocked) return blocked;
   const { id } = await params;
   const event = await getEvent(id);
   if (!event) return fail(404, "This poll doesn't exist or has expired.");

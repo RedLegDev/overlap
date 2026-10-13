@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatMinute, shortZone, WEEKDAY_SHORT } from "@/lib/time";
 import { Segmented } from "./ui";
+import { useTurnstile } from "./useTurnstile";
 
 type Kind = "dates" | "weekdays";
 
@@ -43,7 +44,8 @@ function weekdayOf(isoDate: string) {
 
 const TIME_OPTIONS = Array.from({ length: 49 }, (_, i) => i * 30);
 
-export function CreateForm() {
+export function CreateForm({ siteKey }: { siteKey: string }) {
+  const human = useTurnstile(siteKey);
   const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
@@ -94,6 +96,10 @@ export function CreateForm() {
     if (end <= start) return setError("End time must be after start time.");
     setBusy(true);
     try {
+      const turnstile = await Promise.race([
+        human.token(),
+        new Promise<string>((resolve) => setTimeout(() => resolve(""), 8000)),
+      ]);
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -106,6 +112,7 @@ export function CreateForm() {
           start_min: start,
           end_min: end,
           slot_min: slot,
+          turnstile,
         }),
       });
       const data = (await res.json()) as { id?: string; adminToken?: string; error?: string };
@@ -117,6 +124,7 @@ export function CreateForm() {
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
+      human.reset();
     }
   }
 
@@ -225,6 +233,7 @@ export function CreateForm() {
           </div>
           <p className="mt-1.5 text-xs text-muted">Everyone else sees the grid in their own time zone.</p>
         </div>
+        <div ref={human.ref} className="empty:hidden" />
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 border-t border-line px-5 sm:px-7 py-4 bg-paper/40 rounded-b-3xl">

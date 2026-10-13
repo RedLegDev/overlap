@@ -96,6 +96,40 @@ export function fail(status: number, error: string) {
   return json({ error }, { status });
 }
 
+function clientIp(req: Request) {
+  return req.headers.get("cf-connecting-ip") ?? "local";
+}
+
+function isLocal(req: Request) {
+  const host = new URL(req.url).hostname;
+  return host === "localhost" || host === "127.0.0.1";
+}
+
+/** Returns a 429 response when the caller is over the limit, otherwise null. */
+export async function limited(req: Request, which: "create" | "write") {
+  const limiter = which === "create" ? env.CREATE_LIMIT : env.WRITE_LIMIT;
+  if (!limiter) return null;
+  const { success } = await limiter.limit({ key: clientIp(req) });
+  return success ? null : fail(429, "Too many requests. Wait a minute and try again.");
+}
+
+/** Verifies a Turnstile token. Skipped only on localhost; fails closed everywhere else. */
+export async function humanCheck(req: Request, token: unknown) {
+  if (isLocal(req)) return null;
+  if (!env.TURNSTILE_SECRET) {
+    console.error("TURNSTILE_SECRET is not set; refusing poll creation");
+    return fail(503, "Poll creation is temporarily unavailable.");
+  }
+  if (typeof token !== "string" || !token) return fail(400, "Couldn't verify this browser. Reload and try again.");
+  const body = new FormData();
+  body.append("secret", env.TURNSTILE_SECRET);
+  body.append("response", token);
+  body.append("remoteip", clientIp(req));
+  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean };
+  return data.success ? null : fail(400, "Couldn't verify this browser. Reload and try again.");
+}
+
 export function bearer(req: Request) {
   const h = req.headers.get("authorization") ?? "";
   return h.startsWith("Bearer ") ? h.slice(7) : null;
