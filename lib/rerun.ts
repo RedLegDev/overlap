@@ -5,13 +5,12 @@ export function addDays(isoDate: string, n: number) {
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
 }
 
-/** Shift date-poll days forward by whole weeks so the first date is on or after today. */
+/** Shift date-poll days forward by at least one week, until the first date is on or after today. */
 export function shiftDatesForRerun(dates: string[], today: string) {
   const sorted = [...dates].sort();
   if (!sorted.length) return sorted;
   const first = sorted[0];
-  if (first >= today) return sorted;
-  let weeks = 0;
+  let weeks = 1;
   while (addDays(first, weeks * 7) < today) weeks += 1;
   const shift = weeks * 7;
   return sorted.map((d) => addDays(d, shift));
