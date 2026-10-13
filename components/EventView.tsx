@@ -643,6 +643,15 @@ export function EventView({ initial }: { initial: Initial }) {
               Copy organizer link
             </button>
           )}
+          {admin && (
+            <a
+              href={`/?from=${id}`}
+              onClick={() => track("Poll Rerun")}
+              className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3.5 py-1.5 text-sm font-medium text-ink-2 hover:border-ink/30"
+            >
+              Run this poll again
+            </a>
+          )}
         </div>
       )}
 

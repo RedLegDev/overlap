@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { PublicEvent } from "@/lib/server";
+import { addDays, shiftDatesForRerun } from "@/lib/rerun";
 import { formatMinute, shortZone, WEEKDAY_SHORT } from "@/lib/time";
 import { Segmented } from "./ui";
 import { useTurnstile } from "./useTurnstile";
@@ -32,12 +34,6 @@ function todayIso() {
   return iso(t.getFullYear(), t.getMonth(), t.getDate());
 }
 
-function addDays(isoDate: string, n: number) {
-  const [y, m, d] = isoDate.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + n));
-  return iso(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate());
-}
-
 function weekdayOf(isoDate: string) {
   const [y, m, d] = isoDate.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -64,6 +60,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
   const [busy, setBusy] = useState<false | "verifying" | "creating">(false);
   const [today, setToday] = useState("");
   const [cursor, setCursor] = useState({ y: 2026, m: 0 });
+  const prefillFrom = useRef(false);
 
   useEffect(() => {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -82,6 +79,47 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
     setCursor({ y, m: m - 1 });
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted || !today || prefillFrom.current) return;
+    const from = new URLSearchParams(window.location.search).get("from");
+    if (!from) return;
+    prefillFrom.current = true;
+
+    void (async () => {
+      try {
+        const res = await fetch(`/api/events/${encodeURIComponent(from)}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { event?: PublicEvent };
+        const ev = data.event;
+        if (!ev) return;
+
+        setTitle(ev.title);
+        const noteText = ev.note ?? "";
+        setNote(noteText);
+        if (noteText) setShowNote(true);
+        setKind(ev.kind);
+        setStart(ev.start_min);
+        setEnd(ev.end_min);
+        setSlot(ev.slot_min);
+        setTz(ev.timezone);
+
+        if (ev.kind === "dates") {
+          const shifted = shiftDatesForRerun(ev.days as string[], today);
+          setDates(new Set(shifted));
+          const first = shifted[0];
+          if (first) {
+            const [y, m] = first.split("-").map(Number);
+            setCursor({ y, m: m - 1 });
+          }
+        } else {
+          setWeekdays(new Set(ev.days.map((d) => Number(d))));
+        }
+      } catch {
+        /* starting blank is fine */
+      }
+    })();
+  }, [mounted, today]);
 
   // Snap the range to the slot length when it changes.
   useEffect(() => {
