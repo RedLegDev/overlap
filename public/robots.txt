@@ -1,0 +1,7 @@
+# Search and AI assistants are welcome on the public pages.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /e/
+
+Sitemap: https://overlap.redleg.dev/sitemap.xml

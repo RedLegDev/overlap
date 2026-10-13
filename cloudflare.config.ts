@@ -22,6 +22,7 @@ export default defineConfig({
       // Per-IP limits. Creating polls is the abuse vector; writes cover joins and saves.
       CREATE_LIMIT: bindings.rateLimit({ namespace: "1001", simple: { limit: 6, period: 60 } }),
       WRITE_LIMIT: bindings.rateLimit({ namespace: "1002", simple: { limit: 120, period: 60 } }),
+      SEND_EMAIL: bindings.sendEmail(),
       TURNSTILE_SITE_KEY: bindings.text("0x4AAAAAAFVtlo88YJl4vigu"),
       TURNSTILE_SECRET: bindings.secret(),
     },

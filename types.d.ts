@@ -4,6 +4,7 @@ declare namespace Cloudflare {
     ASSETS: Fetcher;
     CREATE_LIMIT: RateLimit;
     WRITE_LIMIT: RateLimit;
+    SEND_EMAIL: SendEmail;
     TURNSTILE_SITE_KEY: string;
     TURNSTILE_SECRET?: string;
   }

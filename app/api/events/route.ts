@@ -10,6 +10,8 @@ import {
   randomToken,
   validateNewEvent,
 } from "@/lib/server";
+import { sendCreatedEmail, validEmail } from "@/lib/email";
+import { describeDays, formatMinute, zoneCity } from "@/lib/time";
 
 export async function POST(req: Request) {
   const blocked = await limited(req, "create");
@@ -19,6 +21,8 @@ export async function POST(req: Request) {
   if (typeof input === "string") return fail(400, input);
   const notHuman = await humanCheck(req, body?.turnstile);
   if (notHuman) return notHuman;
+  const email = body?.email ? validEmail(body.email) : null;
+  if (body?.email && !email) return fail(400, "That email address doesn't look right.");
 
   const now = Date.now();
   const id = randomId();
@@ -52,5 +56,22 @@ export async function POST(req: Request) {
       ),
   ]);
 
-  return json({ id, adminToken }, { status: 201 });
+  // Never stored; a failed send doesn't block the poll.
+  let emailed = false;
+  if (email) {
+    const origin = new URL(req.url).origin;
+    try {
+      await sendCreatedEmail(email, {
+        title: input.title,
+        when: `${describeDays(input)} · ${formatMinute(input.start_min)} – ${formatMinute(input.end_min % 1440)} ${zoneCity(input.timezone)} time`,
+        shareUrl: `${origin}/e/${id}`,
+        adminUrl: `${origin}/e/${id}#admin=${adminToken}`,
+      });
+      emailed = true;
+    } catch (err) {
+      console.error("created-email send failed", (err as Error)?.message);
+    }
+  }
+
+  return json({ id, adminToken, emailed }, { status: 201 });
 }

@@ -50,6 +50,7 @@ export function EventView({ initial }: { initial: Initial }) {
   const [responses, setResponses] = useState(initial.responses);
   const [stored, setStored] = useState<Stored>({});
   const [isNew, setIsNew] = useState(false);
+  const [emailed, setEmailed] = useState<null | boolean>(null);
   const [viewTz, setViewTz] = useState(initial.event.timezone);
   const [localTz, setLocalTz] = useState(initial.event.timezone);
   const [tab, setTab] = useState<"you" | "group" | "best">("you");
@@ -81,6 +82,7 @@ export function EventView({ initial }: { initial: Initial }) {
       s.token = token;
     }
     if (hash.get("new")) setIsNew(true);
+    if (hash.get("emailed")) setEmailed(hash.get("emailed") === "1");
     if (window.location.hash) history.replaceState(null, "", window.location.pathname + window.location.search);
     writeStored(id, s);
     setStored(s);
@@ -525,6 +527,7 @@ export function EventView({ initial }: { initial: Initial }) {
           url={shareUrl}
           adminUrl={admin ? `${shareUrl}#admin=${admin}` : null}
           fresh={isNew}
+          emailed={emailed}
           onCopy={copy}
           onDismiss={() => setIsNew(false)}
         />
@@ -1039,12 +1042,14 @@ function SharePanel({
   url,
   adminUrl,
   fresh,
+  emailed,
   onCopy,
   onDismiss,
 }: {
   url: string;
   adminUrl: string | null;
   fresh: boolean;
+  emailed: boolean | null;
   onCopy: (text: string, label: string) => void;
   onDismiss: () => void;
 }) {
@@ -1053,7 +1058,13 @@ function SharePanel({
   return (
     <div className={`mb-6 rounded-3xl border p-4 sm:p-5 rise ${fresh ? "border-ink bg-ink text-paper" : "border-line bg-card"}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className={`font-semibold ${fresh ? "" : "text-ink"}`}>{fresh ? "Poll created. Send this link to the group." : "Share link"}</p>
+        <div>
+          <p className={`font-semibold ${fresh ? "" : "text-ink"}`}>{fresh ? "Poll created. Send this link to the group." : "Share link"}</p>
+          {emailed === true && <p className="mt-1 text-[13px] opacity-75">The poll and organizer links are in your inbox.</p>}
+          {emailed === false && (
+            <p className="mt-1 text-[13px] opacity-75">The email didn&rsquo;t send. Copy your organizer link below to keep it.</p>
+          )}
+        </div>
         {fresh && (
           <button onClick={onDismiss} className="-mt-1 -mr-1 h-7 w-7 grid place-items-center rounded-full hover:bg-paper/10" aria-label="Dismiss">
             ×

@@ -49,6 +49,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
   const [mounted, setMounted] = useState(false);
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
+  const [email, setEmail] = useState("");
   const [showNote, setShowNote] = useState(false);
   const [kind, setKind] = useState<Kind>("dates");
   const [dates, setDates] = useState<Set<string>>(new Set());
@@ -59,7 +60,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
   const [tz, setTz] = useState("UTC");
   const [zones, setZones] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<false | "verifying" | "creating">(false);
   const [today, setToday] = useState("");
   const [cursor, setCursor] = useState({ y: 2026, m: 0 });
 
@@ -71,6 +72,9 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
     } catch {
       setZones([zone]);
     }
+    try {
+      setEmail(localStorage.getItem("overlap:email") ?? "");
+    } catch {}
     const t = todayIso();
     setToday(t);
     const [y, m] = t.split("-").map(Number);
@@ -94,12 +98,14 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
     if (!title.trim()) return setError("Give the poll a name.");
     if (!dayCount) return setError(kind === "dates" ? "Pick at least one date." : "Pick at least one day.");
     if (end <= start) return setError("End time must be after start time.");
-    setBusy(true);
+    setBusy("verifying");
     try {
+      // Usually instant. If Turnstile shows a checkbox, give the person time to tick it.
       const turnstile = await Promise.race([
         human.token(),
-        new Promise<string>((resolve) => setTimeout(() => resolve(""), 8000)),
+        new Promise<string>((resolve) => setTimeout(() => resolve(""), 45_000)),
       ]);
+      setBusy("creating");
       const res = await fetch("/api/events", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -113,14 +119,18 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
           end_min: end,
           slot_min: slot,
           turnstile,
+          email: email.trim() || undefined,
         }),
       });
-      const data = (await res.json()) as { id?: string; adminToken?: string; error?: string };
+      const data = (await res.json()) as { id?: string; adminToken?: string; emailed?: boolean; error?: string };
       if (!res.ok || !data.id) throw new Error(data.error || "Couldn't create the poll.");
       try {
         localStorage.setItem(`overlap:${data.id}`, JSON.stringify({ admin: data.adminToken }));
+        if (email.trim()) localStorage.setItem("overlap:email", email.trim());
+        else localStorage.removeItem("overlap:email");
       } catch {}
-      window.location.href = `/e/${data.id}#admin=${data.adminToken}&new=1`;
+      const sent = email.trim() ? (data.emailed ? "&emailed=1" : "&emailed=0") : "";
+      window.location.href = `/e/${data.id}#admin=${data.adminToken}&new=1${sent}`;
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -233,6 +243,22 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
           </div>
           <p className="mt-1.5 text-xs text-muted">Everyone else sees the grid in their own time zone.</p>
         </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-ink-2 mb-2">
+            Email me the links <span className="font-normal text-muted">(optional)</span>
+          </label>
+          <input
+            id="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-xl border border-line bg-paper/60 px-4 py-2.5 text-[15px] placeholder:text-muted/70 focus:bg-card focus:outline-none focus:ring-4 focus:ring-redleg/10 focus:border-redleg/40 transition"
+          />
+          <p className="mt-1.5 text-xs text-muted">One email with the poll link and your organizer link. The address isn&rsquo;t stored.</p>
+        </div>
         <div ref={human.ref} className="empty:hidden" />
       </div>
 
@@ -253,10 +279,10 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
         </p>
         <button
           type="submit"
-          disabled={busy}
+          disabled={!!busy}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-paper px-6 py-3 text-[15px] font-semibold hover:bg-ink-2 active:scale-[0.98] transition disabled:opacity-60"
         >
-          {busy ? "Creating…" : "Create poll"}
+          {busy === "verifying" ? "Verifying…" : busy ? "Creating…" : "Create poll"}
           <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
             <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

@@ -4,12 +4,26 @@ import "@fontsource/instrument-serif/latin-400.css";
 import "@fontsource/instrument-serif/latin-400-italic.css";
 import "./globals.css";
 import { Wordmark } from "@/components/Logo";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: { default: "Overlap — find a time that works", template: "%s · Overlap" },
-  description:
-    "Free group scheduling poll. Pick some days, share a link, everyone paints when they're free. No accounts, no ads. Open source from Red Leg Dev.",
-  icons: { icon: "/icon.svg" },
+  metadataBase: new URL(SITE.url),
+  title: { default: "Overlap: free group scheduling poll", template: "%s · Overlap" },
+  description: SITE.description,
+  applicationName: SITE.name,
+  authors: [{ name: SITE.publisher.name, url: SITE.publisher.url }],
+  publisher: SITE.publisher.name,
+  icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    siteName: SITE.name,
+    url: SITE.url,
+    title: "Overlap: find the time everyone can make",
+    description: SITE.description,
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Overlap group availability heatmap" }],
+  },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
 };
 
 export const viewport: Viewport = {
@@ -36,11 +50,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </header>
         <main className="flex-1">{children}</main>
         <footer className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-10 text-sm text-muted flex flex-wrap items-center justify-between gap-3">
-          <p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1">
+            <a className="hover:text-ink" href="/when2meet-alternative">Overlap vs. when2meet</a>
+            <span>
             Free and open source.{" "}
             <a className="underline decoration-line underline-offset-4 hover:text-ink" href="https://github.com/RedLegDev/overlap">
               Source on GitHub
             </a>
+            </span>
           </p>
           <a href="https://redleg.dev" className="inline-flex items-center gap-2 hover:text-ink">
             <span>Built by</span>
