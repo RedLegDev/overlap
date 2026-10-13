@@ -1,0 +1,15 @@
+{
+  // Slim config for `wrangler d1` only. Deploy source of truth is cloudflare.config.ts.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "overlap",
+  "account_id": "ab1da25c524f59bc61f776304bd88558",
+  "compatibility_date": "2026-10-13",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "overlap",
+      "database_id": "613b17af-691d-4e04-87ed-70bd925e74c6",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

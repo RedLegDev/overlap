@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-redleg: var(--redleg);
+  --color-redleg-ink: var(--redleg-ink);
+  --color-yes: var(--yes);
+  --color-yes-soft: var(--yes-soft);
+  --color-maybe: var(--maybe);
+  --color-maybe-soft: var(--maybe-soft);
+  --color-brass: #b08d3c;
+
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+:root {
+  color-scheme: light;
+  --paper: #f5f3ee;
+  --paper-2: #ece8df;
+  --card: #fbfaf7;
+  --ink: #0a1622;
+  --ink-2: #243b53;
+  --muted: #5c6b7a;
+  --line: #dcd6c9;
+  --line-2: #e8e3d8;
+  --redleg: #c91f32;
+  --redleg-ink: #ffffff;
+  --yes: 22 140 92; /* rgb triplet for alpha ramps */
+  --yes-soft: #dcefe4;
+  --maybe: 176 141 60;
+  --maybe-soft: #f2e8cf;
+  --cell-empty: #ffffff;
+  --cell-off: repeating-linear-gradient(135deg, transparent 0 4px, rgb(10 22 34 / 0.05) 4px 5px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #0b1620;
+    --paper-2: #101e2a;
+    --card: #12212e;
+    --ink: #eef1f4;
+    --ink-2: #c3ced9;
+    --muted: #8a9aab;
+    --line: #233546;
+    --line-2: #1a2a38;
+    --redleg: #ea384c;
+    --yes: 52 199 134;
+    --yes-soft: #12352a;
+    --maybe: 214 176 92;
+    --maybe-soft: #3a3020;
+    --cell-empty: #0f1d29;
+    --cell-off: repeating-linear-gradient(135deg, transparent 0 4px, rgb(255 255 255 / 0.04) 4px 5px);
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgb(201 31 50 / 0.18);
+}
+
+:focus-visible {
+  outline: 2px solid var(--redleg);
+  outline-offset: 2px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.45s var(--ease-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
