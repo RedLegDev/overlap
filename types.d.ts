@@ -1,3 +1,8 @@
+declare module "*?arraybuffer" {
+  const value: ArrayBuffer;
+  export default value;
+}
+
 declare namespace Cloudflare {
   interface Env {
     DB: D1Database;
