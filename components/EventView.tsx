@@ -713,7 +713,7 @@ export function EventView({ initial }: { initial: Initial }) {
       )}
       {admin && (
         <p className="-mt-2 mb-6 text-[13px] text-muted">
-          Overlap is free from Red Leg Dev, a small studio that builds custom software.{" "}
+          Overlap is free from Red Leg Dev. Custom software, shipped in weeks.{" "}
           <a href={redlegUrl("organizer")} className="underline decoration-line underline-offset-4 hover:text-ink whitespace-nowrap">
             See our work →
           </a>
