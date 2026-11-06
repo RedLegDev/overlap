@@ -14,6 +14,7 @@ import {
   zoneCity,
 } from "@/lib/time";
 import type { PublicEvent, PublicResponse } from "@/lib/server";
+import { CreateForm } from "./CreateForm";
 import { Grid, type Brush } from "./Grid";
 import { Segmented } from "./ui";
 import { track } from "./Analytics";
@@ -63,6 +64,7 @@ export function EventView({ initial }: { initial: Initial }) {
   const [hover, setHover] = useState<Window | null>(null);
   const [required, setRequired] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState("");
+  const [editing, setEditing] = useState(false);
   const version = useRef(initial.v);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
@@ -333,6 +335,17 @@ export function EventView({ initial }: { initial: Initial }) {
     setEvent((e) => ({ ...e, final_start: w?.start ?? null, final_len: w?.len ?? null }));
     if (w) track("Time Locked In", { responses: responses.length });
     flash(w ? "Time locked in." : "Cleared.");
+  }
+
+  async function editDone(saved: boolean) {
+    setEditing(false);
+    if (!saved) return;
+    // Slot indices may have moved; drop anything pointing at the old grid.
+    setInspect(null);
+    setHover(null);
+    version.current = 0;
+    await refresh();
+    flash("Poll updated.");
   }
 
   async function deletePoll() {
@@ -613,8 +626,25 @@ export function EventView({ initial }: { initial: Initial }) {
             {timeRange} {zoneCity(event.timezone)} time
           </span>
           <ZonePicker value={viewTz} local={localTz} eventTz={event.timezone} onChange={setViewTz} fallback={shownTz !== viewTz} />
+          {admin && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="rounded-full border border-line bg-card px-3 py-1 text-[13px] font-medium text-ink-2 hover:border-ink/30"
+            >
+              Edit poll
+            </button>
+          )}
         </div>
       </div>
+
+      {admin && editing && (
+        <div className="mb-6 max-w-3xl rise">
+          <CreateForm
+            siteKey=""
+            edit={{ event, token: admin, locked: responses.length > 0, onDone: editDone }}
+          />
+        </div>
+      )}
 
       {isNew && (
         <SharePanel

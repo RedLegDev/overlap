@@ -40,6 +40,7 @@ export function useTurnstile(siteKey: string) {
   const waiters = useRef<((t: string) => void)[]>([]);
 
   useEffect(() => {
+    if (!siteKey) return;
     let cancelled = false;
     loadScript()
       .then(() => {

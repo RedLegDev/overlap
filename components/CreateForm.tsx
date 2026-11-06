@@ -41,30 +41,44 @@ function weekdayOf(isoDate: string) {
 
 const TIME_OPTIONS = Array.from({ length: 49 }, (_, i) => i * 30);
 
-export function CreateForm({ siteKey }: { siteKey: string }) {
-  const human = useTurnstile(siteKey);
+export interface EditTarget {
+  event: PublicEvent;
+  /** Organizer token, sent as the bearer. */
+  token: string;
+  /** Someone has responded, so slot length and time zone are fixed. */
+  locked: boolean;
+  onDone: (saved: boolean) => void;
+}
+
+export function CreateForm({ siteKey, edit }: { siteKey: string; edit?: EditTarget }) {
+  const ev = edit?.event;
+  const human = useTurnstile(edit ? "" : siteKey);
   const [mounted, setMounted] = useState(false);
-  const [title, setTitle] = useState("");
-  const [note, setNote] = useState("");
+  const [title, setTitle] = useState(ev?.title ?? "");
+  const [note, setNote] = useState(ev?.note ?? "");
   const [email, setEmail] = useState("");
-  const [showNote, setShowNote] = useState(false);
-  const [kind, setKind] = useState<Kind>("dates");
-  const [dates, setDates] = useState<Set<string>>(new Set());
-  const [weekdays, setWeekdays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5]));
-  const [start, setStart] = useState(9 * 60);
-  const [end, setEnd] = useState(17 * 60);
-  const [slot, setSlot] = useState(30);
-  const [tz, setTz] = useState("UTC");
+  const [showNote, setShowNote] = useState(!!ev?.note);
+  const [kind, setKind] = useState<Kind>(ev?.kind ?? "dates");
+  const [dates, setDates] = useState<Set<string>>(
+    new Set(ev?.kind === "dates" ? (ev.days as string[]) : []),
+  );
+  const [weekdays, setWeekdays] = useState<Set<number>>(
+    new Set(ev?.kind === "weekdays" ? ev.days.map(Number) : [1, 2, 3, 4, 5]),
+  );
+  const [start, setStart] = useState(ev?.start_min ?? 9 * 60);
+  const [end, setEnd] = useState(ev?.end_min ?? 17 * 60);
+  const [slot, setSlot] = useState(ev?.slot_min ?? 30);
+  const [tz, setTz] = useState(ev?.timezone ?? "UTC");
   const [zones, setZones] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<false | "verifying" | "creating">(false);
+  const [busy, setBusy] = useState<false | "verifying" | "creating" | "saving">(false);
   const [today, setToday] = useState("");
   const [cursor, setCursor] = useState({ y: 2026, m: 0 });
   const prefillFrom = useRef(false);
 
   useEffect(() => {
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-    setTz(zone);
+    if (!ev) setTz(zone);
     try {
       setZones((Intl as unknown as { supportedValuesOf(k: string): string[] }).supportedValuesOf("timeZone"));
     } catch {
@@ -75,13 +89,14 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
     } catch {}
     const t = todayIso();
     setToday(t);
-    const [y, m] = t.split("-").map(Number);
+    const firstDate = ev?.kind === "dates" ? String(ev.days[0]) : "";
+    const [y, m] = (firstDate && firstDate > t ? firstDate : t).split("-").map(Number);
     setCursor({ y, m: m - 1 });
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!mounted || !today || prefillFrom.current) return;
+    if (!mounted || !today || prefillFrom.current || edit) return;
     const from = new URLSearchParams(window.location.search).get("from");
     if (!from) return;
     prefillFrom.current = true;
@@ -137,6 +152,17 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
     if (!title.trim()) return setError("Give the poll a name.");
     if (!dayCount) return setError(kind === "dates" ? "Pick at least one date." : "Pick at least one day.");
     if (end <= start) return setError("End time must be after start time.");
+    const fields = {
+      title,
+      note,
+      timezone: tz,
+      kind,
+      days: kind === "dates" ? [...dates].sort() : [...weekdays],
+      start_min: start,
+      end_min: end,
+      slot_min: slot,
+    };
+    if (edit) return saveEdit(edit, fields);
     setBusy("verifying");
     try {
       // Usually instant. If Turnstile shows a checkbox, give the person time to tick it.
@@ -149,14 +175,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          title,
-          note,
-          timezone: tz,
-          kind,
-          days: kind === "dates" ? [...dates].sort() : [...weekdays],
-          start_min: start,
-          end_min: end,
-          slot_min: slot,
+          ...fields,
           turnstile,
           email: email.trim() || undefined,
         }),
@@ -175,6 +194,24 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
       setError((err as Error).message);
       setBusy(false);
       human.reset();
+    }
+  }
+
+  async function saveEdit(target: EditTarget, fields: Record<string, unknown>) {
+    setBusy("saving");
+    try {
+      const res = await fetch(`/api/events/${encodeURIComponent(target.event.id)}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json", authorization: `Bearer ${target.token}` },
+        body: JSON.stringify(fields),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Couldn't save the poll.");
+      track("Poll Edited", { kind, days: dayCount, slot });
+      target.onDone(true);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
     }
   }
 
@@ -213,14 +250,16 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <span className="text-sm font-medium text-ink-2">Which days?</span>
-            <Segmented
-              value={kind}
-              onChange={(v) => setKind(v as Kind)}
-              options={[
-                { value: "dates", label: "Specific dates" },
-                { value: "weekdays", label: "Days of the week" },
-              ]}
-            />
+            {!edit && (
+              <Segmented
+                value={kind}
+                onChange={(v) => setKind(v as Kind)}
+                options={[
+                  { value: "dates", label: "Specific dates" },
+                  { value: "weekdays", label: "Days of the week" },
+                ]}
+              />
+            )}
           </div>
           {kind === "dates" ? (
             mounted ? (
@@ -253,6 +292,7 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
             <Segmented
               value={String(slot)}
               onChange={(v) => setSlot(Number(v))}
+              disabled={edit?.locked}
               options={[
                 { value: "15", label: "15m" },
                 { value: "30", label: "30m" },
@@ -271,7 +311,8 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
               id="tz"
               value={tz}
               onChange={(e) => setTz(e.target.value)}
-              className="w-full appearance-none rounded-xl border border-line bg-paper/60 pl-4 pr-10 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-redleg/30"
+              disabled={edit?.locked}
+              className="w-full appearance-none disabled:opacity-60 rounded-xl border border-line bg-paper/60 pl-4 pr-10 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-redleg/30"
             >
               {(zones.length ? zones : [tz]).map((z) => (
                 <option key={z} value={z}>
@@ -281,8 +322,13 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
             </select>
             <Chevron />
           </div>
-          <p className="mt-1.5 text-xs text-muted">Everyone else sees the grid in their own time zone.</p>
+          <p className="mt-1.5 text-xs text-muted">
+            {edit?.locked
+              ? "Slot length and time zone are fixed once people have responded."
+              : "Everyone else sees the grid in their own time zone."}
+          </p>
         </div>
+        {!edit && (
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-ink-2 mb-2">
             Email me the links <span className="font-normal text-muted">(optional)</span>
@@ -299,7 +345,8 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
           />
           <p className="mt-1.5 text-xs text-muted">One email with the poll link and your organizer link. The address isn&rsquo;t stored.</p>
         </div>
-        <div ref={human.ref} className="empty:hidden" />
+        )}
+        {!edit && <div ref={human.ref} className="empty:hidden" />}
       </div>
 
       <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 border-t border-line px-5 sm:px-7 py-4 bg-paper/40 rounded-b-3xl">
@@ -317,16 +364,37 @@ export function CreateForm({ siteKey }: { siteKey: string }) {
             "Pick days of the week."
           )}
         </p>
+        <div className="flex flex-col-reverse sm:flex-row gap-2">
+        {edit && (
+          <button
+            type="button"
+            onClick={() => edit.onDone(false)}
+            className="rounded-full border border-line bg-card px-6 py-3 text-[15px] font-medium text-ink-2 hover:border-ink/30"
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="submit"
           disabled={!!busy}
           className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-paper px-6 py-3 text-[15px] font-semibold hover:bg-ink-2 active:scale-[0.98] transition disabled:opacity-60"
         >
-          {busy === "verifying" ? "Verifying…" : busy ? "Creating…" : "Create poll"}
-          <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-            <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {busy === "verifying"
+            ? "Verifying…"
+            : busy === "saving"
+              ? "Saving…"
+              : busy
+                ? "Creating…"
+                : edit
+                  ? "Save changes"
+                  : "Create poll"}
+          {!edit && (
+            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+              <path d="M4 10h11m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </button>
+        </div>
       </div>
     </form>
   );
@@ -436,7 +504,7 @@ function DatePicker({
 
   function apply(date: string) {
     const d = drag.current;
-    if (!d || d.seen.has(date) || date < today) return;
+    if (!d || d.seen.has(date) || (date < today && d.mode === "add")) return;
     d.seen.add(date);
     setDraft((prev) => {
       const next = new Set(prev ?? selected);
@@ -495,7 +563,7 @@ function DatePicker({
         className="grid grid-cols-7 gap-y-1 touch-none"
         onPointerDown={(e) => {
           const date = (e.target as HTMLElement).closest<HTMLElement>("[data-date]")?.dataset.date;
-          if (!date || date < today) return;
+          if (!date || (date < today && !selected.has(date))) return;
           e.preventDefault();
           window.getSelection()?.removeAllRanges();
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -530,7 +598,7 @@ function DatePicker({
               key={date}
               type="button"
               data-date={date}
-              disabled={past}
+              disabled={past && !on}
               aria-pressed={on}
               aria-label={date}
               onKeyDown={(e) => {

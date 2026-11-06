@@ -10,7 +10,8 @@ Free, open-source group availability poll (when2meet replacement) at https://ove
 ## Commands
 - `npm run dev`: local dev server. D1 state lives in `.cloudflare/state`.
 - `npm run db:migrate:local`: apply migrations to the local D1 (run once before dev).
-- `npm run typecheck` and `npm run build` are the gates. Both must pass before pushing.
+- `npm run typecheck`, `npm test` and `npm run build` are the gates. All must pass before pushing.
+- `npm test` runs `node --test` over `lib/*.test.ts` (Node strips the types; no test framework). Keep tested modules import-free or import with explicit `.ts` paths.
 - **Deploys:** Workers Builds deploys every push to `main`. Never run `npm run deploy` or `wrangler deploy` by hand.
 
 ## How it works

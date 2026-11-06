@@ -35,6 +35,7 @@
     "start": "vite preview",
     "deploy": "vinext-cloudflare deploy",
     "typecheck": "tsc --noEmit",
+    "test": "node --test lib/",
     "db:migrate:local": "wrangler d1 migrations apply overlap --local --persist-to .cloudflare/state",
     "db:migrate:remote": "wrangler d1 migrations apply overlap --remote"
   },
