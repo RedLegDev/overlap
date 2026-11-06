@@ -18,6 +18,11 @@ function perDay(e: GridShape) {
   return Math.max(0, Math.floor((e.end_min - e.start_min) / e.slot_min));
 }
 
+/** Identifies a grid layout; a slot string only means something against the grid it was painted on. */
+export function gridKey(e: GridShape) {
+  return [e.days.join(","), e.start_min, e.end_min, e.slot_min].join("|");
+}
+
 /** Old slot index → new slot index (or -1 when the new grid drops it). */
 function indexMap(from: GridShape, to: GridShape): number[] {
   if (from.slot_min !== to.slot_min) throw new Error("slot length changed");

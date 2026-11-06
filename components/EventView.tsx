@@ -14,6 +14,7 @@ import {
   zoneCity,
 } from "@/lib/time";
 import type { PublicEvent, PublicResponse } from "@/lib/server";
+import { gridKey } from "@/lib/remap";
 import { CreateForm } from "./CreateForm";
 import { Grid, type Brush } from "./Grid";
 import { Segmented } from "./ui";
@@ -68,6 +69,8 @@ export function EventView({ initial }: { initial: Initial }) {
   const version = useRef(initial.v);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
+  const grid = useRef(gridKey(initial.event));
+  const refreshSeq = useRef(0);
 
   const id = event.id;
   const me = stored.rid ? responses.find((r) => r.id === stored.rid) ?? null : null;
@@ -97,12 +100,26 @@ export function EventView({ initial }: { initial: Initial }) {
 
   // ---- live refresh -----------------------------------------------------
   const refresh = useCallback(async () => {
+    const seq = ++refreshSeq.current;
     try {
       const res = await fetch(`/api/events/${id}?v=${version.current}`, { cache: "no-store" });
       if (!res.ok) return;
       const data = (await res.json()) as Partial<Initial> & { unchanged?: boolean; v: number };
+      // A slower, older request must not put back a poll that a newer one already replaced.
+      if (seq !== refreshSeq.current) return;
       if (data.unchanged || !data.event || !data.responses) return;
       version.current = data.v;
+      const nextGrid = gridKey(data.event);
+      if (nextGrid !== grid.current) {
+        // The organizer edited the grid: unsaved strokes were made on the old layout.
+        grid.current = nextGrid;
+        pending.current = null;
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        setDraft(null);
+        setInspect(null);
+        setHover(null);
+        setSave("idle");
+      }
       setEvent(data.event);
       setResponses((prev) => {
         const mine = prev.find((r) => r.id === stored.rid);
@@ -267,7 +284,9 @@ export function EventView({ initial }: { initial: Initial }) {
       },
     });
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!res.ok) throw new Error(String(data.error || "Something went wrong. Try again."));
+    if (!res.ok) {
+      throw Object.assign(new Error(String(data.error || "Something went wrong. Try again.")), { status: res.status });
+    }
     return data;
   }
 
@@ -299,11 +318,20 @@ export function EventView({ initial }: { initial: Initial }) {
       await api(`/api/events/${id}/responses/${stored.rid}`, {
         method: "PUT",
         token: stored.token,
-        body: JSON.stringify({ slots }),
+        body: JSON.stringify({ slots, grid: gridKey(event) }),
       });
       if (pending.current === slots) pending.current = null;
       setSave("saved");
-    } catch {
+    } catch (err) {
+      if ((err as { status?: number }).status === 409) {
+        // Painted on a grid the organizer has since changed; take the server's copy.
+        pending.current = null;
+        setSave("idle");
+        version.current = 0;
+        await refresh();
+        flash((err as Error).message);
+        return;
+      }
       setSave("error");
     }
   }
@@ -340,9 +368,6 @@ export function EventView({ initial }: { initial: Initial }) {
   async function editDone(saved: boolean) {
     setEditing(false);
     if (!saved) return;
-    // Slot indices may have moved; drop anything pointing at the old grid.
-    setInspect(null);
-    setHover(null);
     version.current = 0;
     await refresh();
     flash("Poll updated.");

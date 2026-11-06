@@ -90,7 +90,7 @@ export function CreateForm({ siteKey, edit }: { siteKey: string; edit?: EditTarg
     const t = todayIso();
     setToday(t);
     const firstDate = ev?.kind === "dates" ? String(ev.days[0]) : "";
-    const [y, m] = (firstDate && firstDate > t ? firstDate : t).split("-").map(Number);
+    const [y, m] = (firstDate || t).split("-").map(Number);
     setCursor({ y, m: m - 1 });
     setMounted(true);
   }, []);
@@ -238,7 +238,7 @@ export function CreateForm({ siteKey, edit }: { siteKey: string; edit?: EditTarg
               rows={2}
               placeholder="Details for the group (optional)"
               className="mt-2 w-full rounded-xl border border-line bg-paper/60 px-4 py-2.5 text-[15px] placeholder:text-muted/70 focus:bg-card focus:outline-none focus:ring-4 focus:ring-redleg/10 focus:border-redleg/40 transition resize-none"
-              autoFocus
+              autoFocus={!ev?.note}
             />
           ) : (
             <button type="button" onClick={() => setShowNote(true)} className="mt-2 text-sm text-muted hover:text-ink">
@@ -500,7 +500,9 @@ function DatePicker({
     return out;
   }, [cursor]);
 
-  const canGoBack = cursor.y * 12 + cursor.m > Number(today.slice(0, 4)) * 12 + Number(today.slice(5, 7)) - 1;
+  // Back as far as today, or as far as the earliest date still selected (editing an older poll).
+  const floor = [today, ...selected].sort()[0];
+  const canGoBack = cursor.y * 12 + cursor.m > Number(floor.slice(0, 4)) * 12 + Number(floor.slice(5, 7)) - 1;
 
   function apply(date: string) {
     const d = drag.current;
@@ -611,10 +613,12 @@ function DatePicker({
                 }
               }}
               className={`relative aspect-square sm:aspect-[1.25] text-[15px] tabular font-medium transition-colors duration-100 ${
-                past
-                  ? "text-muted/40 cursor-not-allowed"
-                  : on
-                    ? "bg-ink text-paper"
+                on
+                  ? past
+                    ? "bg-ink/50 text-paper"
+                    : "bg-ink text-paper"
+                  : past
+                    ? "text-muted/40 cursor-not-allowed"
                     : "text-ink hover:bg-paper-2"
               } ${on ? `${prevOn ? "rounded-l-md" : "rounded-l-xl"} ${nextOn ? "rounded-r-md" : "rounded-r-xl"}` : "rounded-xl"}`}
             >
