@@ -325,7 +325,8 @@ export function EventView({ initial }: { initial: Initial }) {
     } catch (err) {
       if ((err as { status?: number }).status === 409) {
         // Painted on a grid the organizer has since changed; take the server's copy.
-        pending.current = null;
+        // Strokes made after a refresh already moved to the new grid stay queued.
+        if (pending.current === slots) pending.current = null;
         setSave("idle");
         version.current = 0;
         await refresh();
