@@ -37,8 +37,9 @@ function trackOutbound(e: MouseEvent) {
     !e.defaultPrevented &&
     !(e.ctrlKey || e.metaKey || e.shiftKey) &&
     (!a.target || /^_(self|parent|top)$/i.test(a.target));
-  if (!sameTab) return track("Outbound Link: Click", props);
-  // Hold the navigation until the event is sent, as the extension did.
+  // Only hold the navigation when the real tracker is loaded (the queue stub
+  // has `q` and never calls back), so blocked analytics adds no delay.
+  if (!sameTab || !window.plausible || "q" in window.plausible) return track("Outbound Link: Click", props);
   e.preventDefault();
   let gone = false;
   const go = () => {

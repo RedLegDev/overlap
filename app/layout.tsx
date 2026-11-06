@@ -42,7 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script
           defer
           data-domain="overlap.redleg.dev"
-          src="https://analytics.redleg.dev/js/script.manual.file-downloads.pageview-props.tagged-events.js"
+          src="https://analytics.redleg.dev/js/script.manual.pageview-props.js"
         />
       </head>
       <body className="min-h-dvh flex flex-col">
