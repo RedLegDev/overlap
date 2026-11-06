@@ -7,6 +7,12 @@ export const SITE = {
   publisher: { name: "Red Leg Dev", url: "https://redleg.dev" },
 };
 
+// Outbound Red Leg Dev links carry UTM tags so redleg.dev can attribute
+// Overlap traffic. `content` names the placement; never a poll id or token.
+export function redlegUrl(content: "footer" | "organizer" | "email") {
+  return `${SITE.publisher.url}/?utm_source=overlap&utm_medium=referral&utm_content=${content}`;
+}
+
 export const FAQ: { q: string; a: string }[] = [
   {
     q: "What is Overlap?",

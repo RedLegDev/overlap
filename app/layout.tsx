@@ -4,7 +4,7 @@ import "@fontsource/instrument-serif/latin-400.css";
 import "@fontsource/instrument-serif/latin-400-italic.css";
 import "./globals.css";
 import { Wordmark } from "@/components/Logo";
-import { SITE } from "@/lib/site";
+import { SITE, redlegUrl } from "@/lib/site";
 import { Analytics } from "@/components/Analytics";
 
 export const metadata: Metadata = {
@@ -38,11 +38,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        {/* Self-hosted, cookie-free Plausible. Manual mode so poll ids and hash tokens are redacted. */}
+        {/* Self-hosted, cookie-free Plausible. Manual mode so poll ids and hash tokens are redacted; outbound clicks are tracked in Analytics.tsx for the same reason. */}
         <script
           defer
           data-domain="overlap.redleg.dev"
-          src="https://analytics.redleg.dev/js/script.manual.file-downloads.outbound-links.pageview-props.tagged-events.js"
+          src="https://analytics.redleg.dev/js/script.manual.file-downloads.pageview-props.tagged-events.js"
         />
       </head>
       <body className="min-h-dvh flex flex-col">
@@ -69,7 +69,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </a>
             </span>
           </p>
-          <a href="https://redleg.dev" className="inline-flex items-center gap-2 hover:text-ink">
+          <a href={redlegUrl("footer")} className="inline-flex items-center gap-2 hover:text-ink">
             <span>Built by</span>
             <span className="font-semibold tracking-tight text-ink">Red Leg Dev</span>
           </a>

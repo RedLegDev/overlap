@@ -19,6 +19,7 @@ import { CreateForm } from "./CreateForm";
 import { Grid, type Brush } from "./Grid";
 import { Segmented } from "./ui";
 import { track } from "./Analytics";
+import { redlegUrl } from "@/lib/site";
 
 interface Initial {
   event: PublicEvent;
@@ -709,6 +710,14 @@ export function EventView({ initial }: { initial: Initial }) {
             </a>
           )}
         </div>
+      )}
+      {admin && (
+        <p className="-mt-2 mb-6 text-[13px] text-muted">
+          Overlap is free from Red Leg Dev, a small studio that builds custom software.{" "}
+          <a href={redlegUrl("organizer")} className="underline decoration-line underline-offset-4 hover:text-ink whitespace-nowrap">
+            See our work →
+          </a>
+        </p>
       )}
 
       {final && (

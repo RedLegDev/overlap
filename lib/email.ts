@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { redlegUrl } from "./site";
 
 const FROM = { email: "overlap@redleg.dev", name: "Overlap" };
 
@@ -42,7 +43,7 @@ export async function sendCreatedEmail(to: string, opts: { title: string; when: 
     <p style="margin:0 0 6px;font-size:15px">Your organizer link lets you see results, lock in a time, or delete the poll from any device. Keep it to yourself.</p>
     <p style="margin:0">${button(adminUrl, "Organizer link", false)}</p>
   </div>
-  <p style="margin:24px 0 0;color:#5c6b7a;font-size:13px">Overlap is free and open source, built by <a href="https://redleg.dev" style="color:#0a1622">Red Leg Dev</a>. Your email address isn't stored.</p>
+  <p style="margin:24px 0 0;color:#5c6b7a;font-size:13px">Overlap is free and open source, built by <a href="${redlegUrl("email")}" style="color:#0a1622">Red Leg Dev</a>. Your email address isn't stored.</p>
 </div></body></html>`;
 
   await env.SEND_EMAIL.send({ from: FROM, to, subject: `Your poll: ${title}`, text, html });
