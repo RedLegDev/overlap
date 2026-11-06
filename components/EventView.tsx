@@ -66,6 +66,8 @@ export function EventView({ initial }: { initial: Initial }) {
   const [required, setRequired] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState("");
   const [editing, setEditing] = useState(false);
+  const [locking, setLocking] = useState(false);
+  const lockingRef = useRef(false);
   const version = useRef(initial.v);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
@@ -355,15 +357,25 @@ export function EventView({ initial }: { initial: Initial }) {
     if (focus === rid) setFocus(null);
   }
 
-  async function lockIn(w: Window | null) {
-    await api(`/api/events/${id}`, {
-      method: "PATCH",
-      token: admin,
-      body: JSON.stringify(w ? { final_start: w.start, final_len: w.len } : { final_start: null }),
-    });
-    setEvent((e) => ({ ...e, final_start: w?.start ?? null, final_len: w?.len ?? null }));
-    if (w) track("Time Locked In", { responses: responses.length });
-    flash(w ? "Time locked in." : "Cleared.");
+  async function lockIn(w: Window | null, source: "prompt" | "list" = "list") {
+    if (lockingRef.current) return;
+    lockingRef.current = true;
+    setLocking(true);
+    try {
+      await api(`/api/events/${id}`, {
+        method: "PATCH",
+        token: admin,
+        body: JSON.stringify(w ? { final_start: w.start, final_len: w.len } : { final_start: null }),
+      });
+      setEvent((e) => ({ ...e, final_start: w?.start ?? null, final_len: w?.len ?? null }));
+      if (w) track("Time Locked In", { responses: responses.length, source });
+      flash(w ? "Time locked in." : "Cleared.");
+    } catch (err) {
+      flash((err as Error).message);
+    } finally {
+      lockingRef.current = false;
+      setLocking(false);
+    }
   }
 
   async function editDone(saved: boolean) {
@@ -545,7 +557,6 @@ export function EventView({ initial }: { initial: Initial }) {
           ) : (
             <ol className="space-y-2" onMouseLeave={() => setHover(null)}>
               {windows.map((w, i) => {
-                const avail = w.yes.length + w.maybe.length;
                 const isFinal = event.final_start === w.start && event.final_len === w.len;
                 return (
                   <li
@@ -566,27 +577,16 @@ export function EventView({ initial }: { initial: Initial }) {
                       <Dots yes={w.yes.length} maybe={w.maybe.length} total={responses.length} />
                     </div>
                     <div className="mt-1.5 flex items-end justify-between gap-3">
-                      <p className="text-[13px] text-muted">
-                        {w.missing.length === 0 && w.maybe.length === 0 ? (
-                          <span className="font-medium text-[rgb(var(--yes))]">Everyone</span>
-                        ) : (
-                          <>
-                            <span className="font-medium text-ink-2 tabular">
-                              {avail} of {responses.length}
-                            </span>
-                            {w.maybe.length > 0 && <span> · {w.maybe.map((p) => nameOf.get(p)).join(", ")} if needed</span>}
-                            {w.missing.length > 0 && <span> · without {w.missing.map((p) => nameOf.get(p)).join(", ")}</span>}
-                          </>
-                        )}
-                      </p>
+                      <Attendance w={w} total={responses.length} nameOf={nameOf} />
                       {admin &&
                         (isFinal ? (
-                          <button onClick={() => lockIn(null)} className="shrink-0 text-[13px] font-medium text-muted hover:text-ink">
+                          <button onClick={() => lockIn(null)} disabled={locking} className="shrink-0 text-[13px] font-medium text-muted hover:text-ink">
                             Unlock
                           </button>
                         ) : (
                           <button
                             onClick={() => lockIn(w)}
+                            disabled={locking}
                             className="shrink-0 rounded-full border border-line px-2.5 py-1 text-[12px] font-semibold text-ink-2 hover:bg-ink hover:text-paper hover:border-ink transition"
                           >
                             Lock in
@@ -741,6 +741,38 @@ export function EventView({ initial }: { initial: Initial }) {
         </div>
       )}
 
+      {admin && event.final_start == null && responses.length >= 2 && windows[0] && (
+        <div className="mb-6 rounded-3xl border border-line bg-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rise">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold uppercase tracking-wider text-muted">
+              Best time · {rangeParts(windows[0].start, windows[0].len).day}
+            </p>
+            <p className="mt-0.5 font-semibold text-[18px] tabular">{rangeParts(windows[0].start, windows[0].len).time}</p>
+            <div className="mt-1">
+              <Attendance w={windows[0]} total={responses.length} nameOf={nameOf} />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <button
+              onClick={() => lockIn(windows[0], "prompt")}
+              disabled={locking}
+              className="rounded-full bg-ink text-paper px-4 py-2 text-sm font-semibold hover:bg-ink-2 disabled:opacity-60"
+            >
+              Lock in
+            </button>
+            <button
+              onClick={() => {
+                setTab("best");
+                requestAnimationFrame(() => document.getElementById("best-times")?.scrollIntoView({ behavior: "smooth" }));
+              }}
+              className="text-sm font-medium text-ink-2 underline underline-offset-4 decoration-line hover:text-ink"
+            >
+              All best times
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* mobile tabs */}
       <div className="lg:hidden sticky top-0 z-30 -mx-4 px-4 py-2 mb-3 bg-paper/85 backdrop-blur border-b border-line/60 [&>div]:flex [&>div]:w-full [&_button]:flex-1">
         <Segmented
@@ -757,7 +789,9 @@ export function EventView({ initial }: { initial: Initial }) {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_320px] items-start">
         <div className={tab === "you" ? "" : "hidden lg:block"}>{youPane}</div>
         <div className={tab === "group" ? "" : "hidden lg:block"}>{groupPane}</div>
-        <div className={`${tab === "best" ? "" : "hidden lg:block"} lg:sticky lg:top-4`}>{bestPane}</div>
+        <div id="best-times" className={`${tab === "best" ? "" : "hidden lg:block"} lg:sticky lg:top-4 scroll-mt-16`}>
+          {bestPane}
+        </div>
       </div>
 
       {admin && (
@@ -790,6 +824,25 @@ function googleLink(title: string, note: string, url: string, start: number, end
   });
   if (weekly) p.set("recur", "RRULE:FREQ=WEEKLY");
   return `https://calendar.google.com/calendar/render?${p}`;
+}
+
+function Attendance({ w, total, nameOf }: { w: Window; total: number; nameOf: Map<string, string> }) {
+  if (w.missing.length === 0 && w.maybe.length === 0) {
+    return (
+      <p className="text-[13px] text-muted">
+        <span className="font-medium text-[rgb(var(--yes))]">Everyone</span>
+      </p>
+    );
+  }
+  return (
+    <p className="text-[13px] text-muted">
+      <span className="font-medium text-ink-2 tabular">
+        {w.yes.length + w.maybe.length} of {total}
+      </span>
+      {w.maybe.length > 0 && <span> · {w.maybe.map((p) => nameOf.get(p)).join(", ")} if needed</span>}
+      {w.missing.length > 0 && <span> · without {w.missing.map((p) => nameOf.get(p)).join(", ")}</span>}
+    </p>
+  );
 }
 
 function Card({ title, aside, children }: { title: string; aside?: React.ReactNode; children: React.ReactNode }) {
