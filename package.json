@@ -24,7 +24,7 @@
     "cf": "^1.0.0-beta.16",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "vite": "^8.3.0",
+    "vite": "^8.3.8",
     "wrangler": "^4.150.0"
   },
   "type": "module",
